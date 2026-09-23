@@ -51,8 +51,20 @@ describe("Auth0 completion route", () => {
     const response = await GET(new Request("https://platform.test/auth/complete?portal=staff&next=/dashboard"));
     expect(mocks.clearStaff).toHaveBeenCalledOnce();
     expect(mocks.setStaff).not.toHaveBeenCalled();
-    expect(response.headers.get("location")).toBe("https://platform.test/login?auth0_error=access_denied");
+    expect(response.headers.get("location")).toBe("https://platform.test/learn/login?auth0_error=access_denied");
     expect(await response.text()).not.toContain("Authentication could not be completed");
+  });
+
+  it.each([
+    [{ staff: true, learner: false }, "/dashboard", mocks.setStaff],
+    [{ staff: false, learner: true }, "/learn", mocks.setLearner],
+  ] as const)("selects the admitted workspace for unified Auth0 login", async (access, destination, setter) => {
+    vi.stubGlobal("fetch", vi.fn(async () => Response.json({ access: "a", refresh: "r", user: { id: "user-1", portal_access: access } })));
+    const { GET } = await import("./route");
+    const response = await GET(new Request("https://platform.test/auth/complete?portal=auto&next=/"));
+    expect(response.headers.get("location")).toBe(`https://platform.test${destination}`);
+    expect(setter).toHaveBeenCalledWith(expect.objectContaining({ access: "a" }), "auth0");
+    expect(JSON.parse(String(vi.mocked(fetch).mock.calls[0][1]?.body))).toEqual({ assertion: "provider-assertion", portal: "auto" });
   });
 
   it("rejects canonical user context without access to the requested portal", async () => {
@@ -80,7 +92,7 @@ describe("Auth0 completion route", () => {
     const { GET } = await import("./route");
     const response = await GET(new Request("https://platform.test/auth/complete?portal=staff&next=https://attacker.example"));
     expect(mocks.clearStaff).toHaveBeenCalledOnce();
-    expect(response.headers.get("location")).toBe("https://platform.test/login?auth0_error=unavailable");
+    expect(response.headers.get("location")).toBe("https://platform.test/learn/login?auth0_error=unavailable");
     expect(await response.text()).not.toContain("secret upstream detail");
   });
 });

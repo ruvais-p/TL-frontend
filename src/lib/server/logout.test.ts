@@ -39,7 +39,7 @@ describe("provider-aware logout routes", () => {
   it("blacklists and clears only the staff namespace for local logout", async () => {
     const { POST } = await import("@/app/api/auth/logout/route");
     const response = await POST();
-    expect(await response.json()).toEqual({ redirect_to: "/login", auth0: false });
+    expect(await response.json()).toEqual({ redirect_to: "/learn/login", auth0: false });
     expect(mocks.revoke).toHaveBeenCalledWith("staff-refresh");
     expect(mocks.clearStaff).toHaveBeenCalledOnce();
     expect(mocks.clearLearner).not.toHaveBeenCalled();
@@ -50,7 +50,7 @@ describe("provider-aware logout routes", () => {
     mocks.staffMethod.mockResolvedValue("auth0");
     const { POST } = await import("@/app/api/auth/logout/route");
     const response = await POST();
-    expect(await response.json()).toEqual({ redirect_to: "/auth/logout?returnTo=/login", auth0: true });
+    expect(await response.json()).toEqual({ redirect_to: "/auth/logout?returnTo=/learn/login", auth0: true });
     expect(mocks.revoke).toHaveBeenCalledWith("staff-refresh");
     expect(mocks.revoke).toHaveBeenCalledWith("learner-refresh");
     expect(mocks.clearStaff).toHaveBeenCalledOnce();
@@ -62,7 +62,7 @@ describe("provider-aware logout routes", () => {
     mocks.auth0Session.mockResolvedValue(null);
     const { POST } = await import("@/app/api/auth/logout/route");
     const response = await POST();
-    expect(await response.json()).toEqual({ redirect_to: "/login", auth0: false });
+    expect(await response.json()).toEqual({ redirect_to: "/learn/login", auth0: false });
     expect(mocks.clearStaff).toHaveBeenCalledOnce();
     expect(mocks.clearLearner).not.toHaveBeenCalled();
   });

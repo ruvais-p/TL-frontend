@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { auth0, auth0Audience } from "@/lib/auth0";
-import { parsePortal, safeContinuation, type AuthPortal } from "@/lib/auth/continuation";
+import { parseLoginPortal, portalForContinuation, safeContinuation, type AuthPortal, type LoginPortal } from "@/lib/auth/continuation";
 import { getApiBaseUrl } from "@/lib/env";
 import { clearLearnerSession, setLearnerSession } from "@/lib/server/learner-session";
 import { clearSession, setSession, type TokenPair } from "@/lib/server/session";
@@ -14,26 +14,39 @@ function noStoreRedirect(request: Request, path: string) {
   return response;
 }
 
-function loginError(request: Request, portal: AuthPortal, code = "access_denied") {
-  const path = portal === "learner" ? "/learn/login" : "/login";
-  return noStoreRedirect(request, `${path}?auth0_error=${encodeURIComponent(code)}`);
+function loginError(request: Request, code = "access_denied") {
+  return noStoreRedirect(request, `/learn/login?auth0_error=${encodeURIComponent(code)}`);
+}
+
+async function clearPortal(portal: LoginPortal) {
+  if (portal === "staff") return clearSession();
+  if (portal === "learner") return clearLearnerSession();
+  await clearSession();
+  await clearLearnerSession();
+}
+
+function resolvePortal(requested: LoginPortal, access: { staff?: boolean; learner?: boolean }, candidate: string | null): AuthPortal | null {
+  if (requested !== "auto") return access[requested] === true ? requested : null;
+  const hintedPortal = portalForContinuation(candidate);
+  if (hintedPortal && access[hintedPortal] === true) return hintedPortal;
+  if (access.staff === true) return "staff";
+  if (access.learner === true) return "learner";
+  return null;
 }
 
 export async function GET(request: Request) {
   const url = new URL(request.url);
-  const portal = parsePortal(url.searchParams.get("portal"));
-  if (!portal) return noStoreRedirect(request, "/login?auth0_error=access_denied");
-  const destination = safeContinuation(portal, url.searchParams.get("next"));
-  const clearPortal = portal === "learner" ? clearLearnerSession : clearSession;
+  const portal = parseLoginPortal(url.searchParams.get("portal"));
+  if (!portal) return loginError(request);
   if (!auth0 || !auth0Audience) {
-    await clearPortal();
-    return loginError(request, portal, "unavailable");
+    await clearPortal(portal);
+    return loginError(request, "unavailable");
   }
   try {
     const session = await auth0.getSession();
     if (!session) {
-      await clearPortal();
-      return loginError(request, portal);
+      await clearPortal(portal);
+      return loginError(request);
     }
     const { token } = await auth0.getAccessToken({ audience: auth0Audience });
     const exchange = await fetch(`${getApiBaseUrl()}/auth/auth0/exchange/`, {
@@ -43,25 +56,26 @@ export async function GET(request: Request) {
       cache: "no-store",
     });
     if (!exchange.ok) {
-      await clearPortal();
-      return loginError(request, portal);
+      await clearPortal(portal);
+      return loginError(request);
     }
     const payload = await exchange.json() as ExchangePayload;
-    const admitted = portal === "learner"
-      ? payload.user?.portal_access?.learner
-      : payload.user?.portal_access?.staff;
-    if (!payload.access || !payload.refresh || !payload.user?.id || admitted !== true) {
-      await clearPortal();
-      return loginError(request, portal);
+    const selectedPortal = resolvePortal(portal, payload.user?.portal_access ?? {}, url.searchParams.get("next"));
+    if (!payload.access || !payload.refresh || !payload.user?.id || !selectedPortal) {
+      await clearPortal(portal);
+      return loginError(request);
     }
-    if (portal === "learner") {
+    if (selectedPortal === "learner") {
+      await clearSession();
       await setLearnerSession(payload, "auth0");
     } else {
+      await clearLearnerSession();
       await setSession(payload, "auth0");
     }
+    const destination = safeContinuation(selectedPortal, url.searchParams.get("next"));
     return noStoreRedirect(request, destination);
   } catch {
-    await clearPortal();
-    return loginError(request, portal, "unavailable");
+    await clearPortal(portal);
+    return loginError(request, "unavailable");
   }
 }

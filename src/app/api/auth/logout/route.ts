@@ -19,8 +19,8 @@ export async function POST() {
     await revokeRefreshToken(await learnerRefreshToken());
     await clearLearnerSession();
     await clearSession();
-    return Response.json({ redirect_to: "/auth/logout?returnTo=/login", auth0: true });
+    return Response.json({ redirect_to: "/auth/logout?returnTo=/learn/login", auth0: true });
   }
   await clearSession();
-  return Response.json({ redirect_to: "/login", auth0: false });
+  return Response.json({ redirect_to: "/learn/login", auth0: false });
 }

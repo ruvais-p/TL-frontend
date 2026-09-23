@@ -8,7 +8,7 @@ Next.js 16 frontend for curriculum administration and the responsive student lea
 2. Set `DJANGO_API_URL=http://127.0.0.1:8000/api/v1` and keep `ADMIN_SECURE_COOKIES=false` for local HTTP only. Put them in your shell environment or an ignored `.env.local` file.
 3. Run `npm install` and `npm run dev`, then open `http://localhost:3000`.
 
-Staff sign in at `/login` with an admitted, permission-bearing staff account. This includes teachers whose only staff destination may be assigned course-support chats. Students sign in at `/learn/login` with a `STUDENT` account, or arrive through the signed Moodle exchange.
+Everyone signs in at `/learn/login`. The shared portal opens the staff workspace for an admitted, permission-bearing staff account and the learner workspace for a `STUDENT` account. The legacy `/login` URL redirects to the shared portal, while signed Moodle exchanges can still create learner sessions directly.
 
 ## Environment
 

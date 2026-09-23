@@ -9,9 +9,9 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { Field, FieldGroup, FieldLabel } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
 import { Spinner } from "@/components/ui/spinner";
-import { learnerAuthApi, LearnerApiError } from "@/lib/learner/api";
+import { ApiError, authApi } from "@/lib/curriculum/api";
 import { LearnerBrand } from "./brand";
-import { auth0LoginUrl, safeContinuation } from "@/lib/auth/continuation";
+import { auth0LoginUrl, portalForContinuation, safeContinuation } from "@/lib/auth/continuation";
 
 export function LearnerLoginForm({ auth0Available = false }: { auth0Available?: boolean }) {
   const [busy, setBusy] = useState(false);
@@ -28,10 +28,14 @@ export function LearnerLoginForm({ auth0Available = false }: { auth0Available?: 
     setError("");
     const form = new FormData(event.currentTarget);
     try {
-      await learnerAuthApi.login(String(form.get("email")), String(form.get("password")));
-      router.replace(safeContinuation("learner", params.get("next")));
+      const result = await authApi.login(
+        String(form.get("email")),
+        String(form.get("password")),
+        portalForContinuation(params.get("next")),
+      );
+      router.replace(safeContinuation(result.portal, params.get("next")));
     } catch (caught) {
-      setError(caught instanceof LearnerApiError ? caught.message : "The learning service is unavailable. Please try again.");
+      setError(caught instanceof ApiError ? caught.message : "The platform is unavailable. Please try again.");
     } finally {
       setBusy(false);
     }
@@ -44,13 +48,13 @@ export function LearnerLoginForm({ auth0Available = false }: { auth0Available?: 
         <Card>
           <CardHeader>
             <CardTitle className="text-2xl">Welcome back</CardTitle>
-            <CardDescription>Sign in to continue the learning assigned by your institution.</CardDescription>
+            <CardDescription>Sign in with your Tella account. We’ll open the right workspace for you.</CardDescription>
           </CardHeader>
           <CardContent>
             {auth0Available && (
               <>
                 <Button asChild type="button" size="lg" variant="outline" className="w-full">
-                  <a href={auth0LoginUrl("learner", params.get("next"))}>
+                  <a href={auth0LoginUrl("auto", params.get("next"))}>
                     <ShieldCheck data-icon="inline-start" />
                     Continue with Auth0
                   </a>
@@ -83,7 +87,7 @@ export function LearnerLoginForm({ auth0Available = false }: { auth0Available?: 
             </form>
           </CardContent>
           <CardFooter className="justify-center">
-            <p className="flex items-center gap-2 text-xs text-muted-foreground"><LockKeyhole className="size-3.5" />Your university may sign you in automatically through Moodle.</p>
+            <p className="flex items-center gap-2 text-xs text-muted-foreground"><LockKeyhole className="size-3.5" />Your access and workspace are selected automatically.</p>
           </CardFooter>
         </Card>
         <p className="mt-6 text-center text-xs text-muted-foreground">Curriculum-connected learning · Progress saved online</p>

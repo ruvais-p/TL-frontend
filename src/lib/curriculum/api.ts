@@ -2,6 +2,7 @@ import type { Activity, ApiErrorBody, Chapter, ContentRecord, Course, CourseChat
 
 function errorMessage(body:ApiErrorBody,status:number){if(body.error?.message)return body.error.message;if(body.detail)return body.detail;for(const[key,value]of Object.entries(body)){if(Array.isArray(value)&&value.length)return `${key.replaceAll("_"," ")}: ${String(value[0])}`}return `Request failed (${status})`}
 export class ApiError extends Error { constructor(public status: number, public body: ApiErrorBody) { super(errorMessage(body,status)); } }
+export type LoginResult = { ok: true; portal: "staff" | "learner" };
 
 async function request<T>(path: string, init?: RequestInit): Promise<T> {
   const response = await fetch(`/api/${path}`, { ...init, headers: { ...(init?.body ? { "content-type": "application/json" } : {}), ...init?.headers } });
@@ -10,7 +11,7 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
 }
 const json = (value: unknown) => JSON.stringify(value);
 export type LogoutResult = { redirect_to: string; auth0: boolean };
-export const authApi = { me: () => request<User>("auth/me"), login: (email: string, password: string) => request<{ok:true}>("auth/login", { method:"POST", body:json({email,password}) }), logout: () => request<LogoutResult>("auth/logout", {method:"POST"}) };
+export const authApi = { me: () => request<User>("auth/me"), login: (email: string, password: string, portalHint?: "staff" | "learner" | null) => request<LoginResult>("auth/login", { method:"POST", body:json({email,password,...(portalHint ? {portal_hint:portalHint} : {})}) }), logout: () => request<LogoutResult>("auth/logout", {method:"POST"}) };
 export const curriculumApi = {
   programs: () => request<Program[]>("curriculum/programs"), courses: () => request<Course[]>("curriculum/courses"), course: (id: UUID) => request<Course>(`curriculum/courses/${id}`),
   createProgram: (data: Partial<Program>) => request<Program>("curriculum/programs", {method:"POST",body:json(data)}),

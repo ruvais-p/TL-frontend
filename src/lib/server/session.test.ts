@@ -20,20 +20,39 @@ describe("admin session", () => {
     const { POST } = await import("@/app/api/auth/login/route");
     const response = await POST(new Request("http://admin/api/auth/login", { method: "POST", body: JSON.stringify({ email: "a@b.com", password: "secret" }) }));
     expect(response.status).toBe(200);
+    expect(await response.json()).toEqual({ ok: true, portal: "staff" });
     expect(cookieStore.set).toHaveBeenCalledWith("tella_admin_access", "access", expect.objectContaining({ httpOnly: true }));
     expect(values.get("tella_admin_refresh")).toBe("refresh");
     expect(values.get("tella_admin_auth_method")).toBe("password");
-    expect(JSON.parse(String(vi.mocked(fetch).mock.calls[0][1]?.body))).toEqual({ email: "a@b.com", password: "secret", portal: "staff" });
+    expect(JSON.parse(String(vi.mocked(fetch).mock.calls[0][1]?.body))).toEqual({ email: "a@b.com", password: "secret" });
   });
 
-  it("rejects a valid non-admin account and clears tokens", async () => {
+  it("routes a valid learner account into the learner cookie namespace", async () => {
     vi.stubGlobal("fetch", vi.fn()
       .mockResolvedValueOnce(Response.json({ access: "access", refresh: "refresh" }))
       .mockResolvedValueOnce(Response.json({ groups: ["STUDENT"], portal_access: { staff: false, learner: true } })));
     const { POST } = await import("@/app/api/auth/login/route");
     const response = await POST(new Request("http://admin/api/auth/login", { method: "POST", body: "{}" }));
-    expect(response.status).toBe(403);
-    expect(values.size).toBe(0);
+    expect(response.status).toBe(200);
+    expect(await response.json()).toEqual({ ok: true, portal: "learner" });
+    expect(values.get("tella_learner_access")).toBe("access");
+    expect(values.get("tella_learner_refresh")).toBe("refresh");
+    expect(values.has("tella_admin_access")).toBe(false);
+  });
+
+  it("honors an allowlisted learner hint for an account with both portal roles", async () => {
+    vi.stubGlobal("fetch", vi.fn()
+      .mockResolvedValueOnce(Response.json({ access: "access", refresh: "refresh" }))
+      .mockResolvedValueOnce(Response.json({ groups: ["ADMIN", "STUDENT"], portal_access: { staff: true, learner: true } })));
+    const { POST } = await import("@/app/api/auth/login/route");
+    const response = await POST(new Request("http://admin/api/auth/login", {
+      method: "POST",
+      body: JSON.stringify({ email: "both@example.com", password: "secret", portal_hint: "learner" }),
+    }));
+    expect(await response.json()).toEqual({ ok: true, portal: "learner" });
+    expect(values.get("tella_learner_access")).toBe("access");
+    expect(values.has("tella_admin_access")).toBe(false);
+    expect(JSON.parse(String(vi.mocked(fetch).mock.calls[0][1]?.body))).toEqual({ email: "both@example.com", password: "secret" });
   });
 
   it("preserves invalid credential status without creating cookies", async () => {

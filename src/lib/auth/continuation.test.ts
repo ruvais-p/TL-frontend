@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { auth0LoginUrl, parsePortal, safeContinuation } from "./continuation";
+import { auth0LoginUrl, parseLoginPortal, parsePortal, portalForContinuation, safeContinuation } from "./continuation";
 
 describe("Auth0 continuation validation", () => {
   it("keeps valid destinations within the requested workspace", () => {
@@ -27,6 +27,20 @@ describe("Auth0 continuation validation", () => {
     expect(parsePortal("staff")).toBe("staff");
     expect(parsePortal("learner")).toBe("learner");
     expect(parsePortal("admin")).toBeNull();
+    expect(parseLoginPortal("auto")).toBe("auto");
+  });
+
+  it("creates a unified Auth0 entry while preserving only an allowed destination", () => {
+    const url = new URL(auth0LoginUrl("auto", "/learn/courses/42"), "https://platform.test");
+    expect(url.searchParams.get("returnTo")).toBe("/auth/complete?portal=auto&next=%2Flearn%2Fcourses%2F42");
+    const unsafe = new URL(auth0LoginUrl("auto", "https://attacker.example"), "https://platform.test");
+    expect(unsafe.searchParams.get("returnTo")).toBe("/auth/complete?portal=auto&next=%2F");
+  });
+
+  it("derives role hints only from allowlisted continuation paths", () => {
+    expect(portalForContinuation("/learn/courses/42")).toBe("learner");
+    expect(portalForContinuation("/learners")).toBe("staff");
+    expect(portalForContinuation("https://attacker.example")).toBeNull();
   });
 
   it("places only a validated portal and destination in the Auth0 return path", () => {

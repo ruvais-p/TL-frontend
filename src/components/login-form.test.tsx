@@ -26,11 +26,11 @@ vi.mock("@/lib/learner/api", () => ({
 }));
 vi.mock("./learner/brand", () => ({ LearnerBrand: () => <div role="img" aria-label="Sofia Systems" /> }));
 
-describe("dual authentication login forms", () => {
+describe("authentication login forms", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     mocks.params = new URLSearchParams();
-    mocks.staffLogin.mockResolvedValue(undefined);
+    mocks.staffLogin.mockResolvedValue({ ok: true, portal: "staff" });
     mocks.learnerLogin.mockResolvedValue(undefined);
   });
 
@@ -55,15 +55,15 @@ describe("dual authentication login forms", () => {
 
   it("offers both methods to learners, constrains continuation, and remains accessible", async () => {
     mocks.params = new URLSearchParams("next=/dashboard");
+    mocks.staffLogin.mockResolvedValue({ ok: true, portal: "learner" });
     const { container } = render(<LearnerLoginForm auth0Available />);
     const auth0Link = screen.getByRole("link", { name: /continue with auth0/i });
-    expect(auth0Link.getAttribute("href")).toContain("portal%3Dlearner");
-    expect(auth0Link.getAttribute("href")).toContain("next%3D%252Flearn");
-    expect(screen.getByText(/automatically through Moodle/i)).not.toBeNull();
+    expect(auth0Link.getAttribute("href")).toContain("portal%3Dauto");
+    expect(screen.getByText(/selected automatically/i)).not.toBeNull();
     await userEvent.type(screen.getByLabelText(/email address/i), "student@example.com");
     await userEvent.type(screen.getByLabelText(/password/i), "secret");
     await userEvent.click(screen.getByRole("button", { name: /^sign in$/i }));
-    expect(mocks.learnerLogin).toHaveBeenCalledWith("student@example.com", "secret");
+    expect(mocks.staffLogin).toHaveBeenCalledWith("student@example.com", "secret", "staff");
     expect(mocks.replace).toHaveBeenCalledWith("/learn");
     expect((await axe(container)).violations.filter((violation) => ["serious", "critical"].includes(violation.impact || ""))).toEqual([]);
   });
