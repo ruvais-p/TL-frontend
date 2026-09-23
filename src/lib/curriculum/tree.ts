@@ -1,0 +1,5 @@
+import type{Activity,Chapter,Course,CourseVersion,ResourceKind,Selection,Subtopic}from"./types";
+export type SelectedResource=CourseVersion|Chapter|Subtopic|Activity;
+export function findSelected(course:Course,selection:Selection|null):SelectedResource|null{if(!selection)return null;for(const version of course.versions){if(selection.kind==="version"&&version.id===selection.id)return version;for(const chapter of version.chapters){if(selection.kind==="chapter"&&chapter.id===selection.id)return chapter;for(const subtopic of chapter.subtopics){if(selection.kind==="subtopic"&&subtopic.id===selection.id)return subtopic;for(const activity of subtopic.activities)if(selection.kind==="activity"&&activity.id===selection.id)return activity}}}return null}
+export const resourceEndpoint:Record<ResourceKind,string>={version:"course-versions",chapter:"chapters",subtopic:"subtopics",activity:"activities"};
+export function moveIds(items:{id:string}[],index:number,direction:-1|1){const target=index+direction;if(target<0||target>=items.length)return items.map(item=>item.id);const ids=items.map(item=>item.id);[ids[index],ids[target]]=[ids[target],ids[index]];return ids}

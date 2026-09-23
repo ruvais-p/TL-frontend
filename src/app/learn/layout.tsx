@@ -1,0 +1,22 @@
+import type { Metadata } from "next";
+import { Poppins } from "next/font/google";
+
+export const metadata: Metadata = {
+  title: {
+    default: "Sofia Learning Platform",
+    template: "%s · Sofia",
+  },
+  description: "Curriculum-connected skill enhancement for business management students",
+};
+
+const poppins = Poppins({
+  variable: "--font-poppins",
+  subsets: ["latin"],
+  weight: ["400", "500", "600", "700"],
+  display: "swap",
+  fallback: ["Arial", "sans-serif"],
+});
+
+export default function LearnerLayout({ children }: { children: React.ReactNode }) {
+  return <div className={poppins.variable}>{children}</div>;
+}

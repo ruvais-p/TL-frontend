@@ -1,0 +1,1 @@
+import{AdminShell}from"@/components/admin-shell";import{AuthProvider}from"@/components/auth-provider";export default function ProtectedLayout({children}:{children:React.ReactNode}){return <AuthProvider><AdminShell>{children}</AdminShell></AuthProvider>}

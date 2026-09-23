@@ -1,0 +1,15 @@
+export type UUID = string;
+export type Status = "DRAFT" | "IN_REVIEW" | "APPROVED" | "PUBLISHED" | "ARCHIVED";
+export type User = { id: UUID; email: string; display_name: string; is_superuser: boolean; groups: string[]; permissions: string[]; portal_access?: { staff: boolean; learner: boolean } };
+export type ContentRecord = { id: UUID; activity: UUID; content_type: string; content: Record<string, unknown>; created_at: string; updated_at: string };
+export type ExperimentRecord = { id: UUID; activity: UUID; experiment_type: string; instructions: string; configuration: Record<string, unknown>; external_url: string | null; created_at: string; updated_at: string };
+export type Activity = { id: UUID; subtopic: UUID; activity_type: string; title: string; description: string; display_order: number; is_required: boolean; estimated_minutes: number; completion_rule: Record<string, unknown>; status: Status; content: Record<string, unknown> | null; content_record: ContentRecord | null; experiment: ExperimentRecord | null };
+export type Subtopic = { id: UUID; chapter: UUID; title: string; slug: string; description: string; learning_objectives: string[]; estimated_minutes: number; display_order: number; is_required: boolean; status: Status; activities: Activity[] };
+export type Chapter = { id: UUID; course_version: UUID; title: string; slug: string; description: string; chapter_number: number; estimated_minutes: number; is_required: boolean; status: Status; display_order: number; completion_rule: Record<string, unknown>; subtopics: Subtopic[] };
+export type CourseVersion = { id: UUID; course: UUID; version_number: number; name: string; status: Status; published_at: string | null; chapters: Chapter[] };
+export type Course = { id: UUID; program: UUID; program_name: string; name: string; code: string; description: string; thumbnail?: UUID | null; status: Status; display_order: number; versions: CourseVersion[]; published_version?: CourseVersion | null; chatbot_available?: boolean };
+export type Program = { id: UUID; name: string; code: string; description: string; grade: string; status: Status; courses: Course[] };
+export type CourseChatbotConfig = { id: UUID; course_version: UUID; is_enabled: boolean; approved_context: string; context_revision: number; updated_by: UUID | null; created_at: string; updated_at: string };
+export type ResourceKind = "version" | "chapter" | "subtopic" | "activity";
+export type Selection = { kind: ResourceKind; id: UUID };
+export type ApiErrorBody = { detail?: string; error?: { code?: string; message?: string; details?: Record<string, unknown> }; [field: string]: unknown };

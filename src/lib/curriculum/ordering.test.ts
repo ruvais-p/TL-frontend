@@ -1,0 +1,1 @@
+import{describe,expect,it}from"vitest";import{moveIds}from"./tree";describe("complete sibling ordering",()=>{const items=[{id:"a"},{id:"b"},{id:"c"}];it("moves a sibling while retaining every id exactly once",()=>expect(moveIds(items,1,-1)).toEqual(["b","a","c"]));it("keeps persisted order at boundaries",()=>expect(moveIds(items,0,-1)).toEqual(["a","b","c"]))});
